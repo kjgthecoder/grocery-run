@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Grocery run</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Grocery">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
+<style>
+  :root{
+    --ink:#14181C; --rule:#E3E6E1; --spark:#FFC220; --good:#2F6F4E; --over:#B3452B;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0 auto;background:#fff;color:var(--ink);font-family:var(--sans);
+       padding:0 16px 190px;max-width:680px;-webkit-text-size-adjust:100%}
+  /* standalone only: insets are 0 in a browser tab, so the design is unchanged there */
+  body{padding-left:max(16px,env(safe-area-inset-left));
+       padding-right:max(16px,env(safe-area-inset-right));
+       padding-bottom:calc(190px + env(safe-area-inset-bottom))}
+  button,input,select{font:inherit;color:inherit}
+  button{background:none;border:0;padding:0;cursor:pointer}
+  input,select{background:#fff}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.6}
+  h1{font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.05;margin:4px 0 0}
+  h2{font-size:16px;font-weight:700;margin:0}
+  .top{display:flex;align-items:baseline;justify-content:space-between;padding-top:24px}
+  .top{padding-top:calc(24px + env(safe-area-inset-top))}
+  .ceil{text-align:right;font-family:var(--mono)}
+  .ceil button{font-size:22px;font-weight:700;border-bottom:1px dotted var(--ink)}
+  .intro{font-size:13.5px;line-height:1.55;opacity:.8;margin:12px 0 0}
+
+  .panel{margin-top:18px;border:2px solid var(--ink);padding:14px}
+  .plabel{font-family:var(--mono);font-size:10px;letter-spacing:.14em;opacity:.6;margin-bottom:8px}
+  .addrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .grow{flex:1 1 150px;min-width:130px}
+  input[type=text],input[type=number],select{border:1px solid var(--ink);padding:10px;font-size:16px;width:100%}
+  .pricewrap{display:flex;align-items:center;border:1px solid var(--ink);padding:4px 10px;flex:0 0 auto}
+  .pricewrap span{font-family:var(--mono);opacity:.6}
+  .pricewrap input{border:0;padding:6px 0;width:74px;text-align:right;font-family:var(--mono);outline:none}
+  .qtywrap{flex:0 0 72px}
+  .seg{display:flex;border:1px solid var(--ink);flex:0 0 auto}
+  .seg button{padding:9px 11px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;white-space:nowrap}
+  .seg button + button{border-left:1px solid var(--ink)}
+  .seg button.on{background:var(--spark);font-weight:700}
+  .btn{padding:10px 16px;background:var(--ink);color:#fff;font-family:var(--mono);font-size:12px;letter-spacing:.1em}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--ink)}
+  .btn[disabled]{opacity:.35}
+  .hint{font-size:12px;opacity:.6;margin-top:10px;line-height:1.5}
+  .divider{height:1px;background:var(--rule);margin:14px 0}
+
+  section{margin-top:30px}
+  .shead{display:flex;align-items:baseline;justify-content:space-between;
+         padding-bottom:8px;border-bottom:2px solid var(--ink);gap:10px}
+  .sleft{display:flex;align-items:baseline;min-width:0}
+  .aisle{font-family:var(--mono);font-size:11px;opacity:.5;margin-right:12px;flex:0 0 auto}
+  .sright{display:flex;align-items:baseline;gap:10px;flex:0 0 auto}
+  .stotal{font-family:var(--mono);font-size:12px;opacity:.6}
+  .xcat{font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--over);opacity:.75}
+  ul{list-style:none;margin:0;padding:0}
+  li{border-bottom:1px solid var(--rule)}
+  .row{display:flex;align-items:flex-start;gap:12px;padding:12px 0}
+  .box{flex:0 0 auto;width:28px;height:28px;margin-top:2px;border:2px solid var(--ink);
+       background:#fff;color:#fff;font-family:var(--mono);font-size:16px;line-height:1;
+       display:flex;align-items:center;justify-content:center}
+  .box.on{background:var(--good);border-color:var(--good)}
+  .mid{flex:1 1 auto;text-align:left;min-width:0}
+  .name{font-size:15px;font-weight:600}
+  .tags{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+  .qty{font-family:var(--mono);font-size:11px;opacity:.6}
+  .tag{font-family:var(--mono);font-size:9px;letter-spacing:.1em;padding:2px 5px}
+  .rate{font-family:var(--mono);font-size:9px;opacity:.5}
+  .note{font-size:12.5px;opacity:.7;margin-top:2px}
+  .right{flex:0 0 auto;text-align:right;min-width:84px}
+  .price{font-family:var(--mono);font-size:14px;font-weight:600;border-bottom:1px dotted var(--ink)}
+  .acts{display:flex;justify-content:flex-end;gap:10px;margin-top:6px}
+  .act{font-family:var(--mono);font-size:9px;letter-spacing:.08em;opacity:.55}
+  .act.del{color:var(--over);opacity:.85}
+  .dim{opacity:.45}.gone{opacity:.35}.strike{text-decoration:line-through}
+  .empty{font-size:13px;opacity:.5;padding:14px 0;line-height:1.6}
+
+  footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding-bottom:env(safe-area-inset-bottom)}
+  .tear{height:8px;background-image:radial-gradient(circle at 4px 8px,transparent 4px,var(--ink) 4.5px);
+        background-size:12px 8px;opacity:.9}
+  .tape{max-width:680px;margin:0 auto;padding:10px 16px 12px;font-family:var(--mono)}
+  .tape{padding-left:max(16px,env(safe-area-inset-left));
+        padding-right:max(16px,env(safe-area-inset-right))}
+  .tline{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.1em;opacity:.6}
+  .tmain{display:flex;align-items:flex-end;justify-content:space-between;margin-top:4px}
+  .tlab{font-size:10px;letter-spacing:.12em;opacity:.6}
+  .tbig{font-size:28px;font-weight:700;line-height:1.1}
+  .tleft{font-size:20px;font-weight:700}
+  .bar{height:4px;background:var(--rule);margin-top:8px}
+  .bar span{display:block;height:4px;background:var(--spark)}
+  .warn{font-size:11px;margin-top:6px}
+
+  .tax-ref{margin-top:14px;border:1px solid var(--rule)}
+  .tax-ref summary{font-family:var(--mono);font-size:10px;letter-spacing:.14em;opacity:.6;
+    padding:8px 12px;cursor:pointer;user-select:none;list-style:none}
+  .tax-ref summary::-webkit-details-marker{display:none}
+  .tax-ref summary::before{content:"▶  ";font-size:9px}
+  .tax-ref[open] summary::before{content:"▼  "}
+  .tax-ref table{width:100%;border-collapse:collapse;font-size:12px;padding:0 12px 12px}
+  .tax-ref th{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-align:left;
+    padding:4px 8px;border-bottom:1px solid var(--ink);opacity:.7}
+  .tax-ref td{padding:6px 8px;border-bottom:1px solid var(--rule);vertical-align:top;line-height:1.4}
+  .tax-ref tr:last-child td{border-bottom:none}
+  .tax-ref td:first-child{font-family:var(--mono);font-size:10px;font-weight:700;
+    white-space:nowrap;padding-right:14px}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div>
+    <div class="eyebrow" id="eyebrow">Walmart · Conway</div>
+    <h1>Grocery run</h1>
+  </div>
+  <div class="ceil">
+    <div class="eyebrow">Ceiling</div>
+    <button id="ceilBtn">$300.00</button>
+  </div>
+</div>
+
+<p class="intro">Build the list before you leave, then check off and correct prices in the aisle. Food is taxed at 3.625% in Conway, everything else at 10% — each line uses its own rate. Tap the ceiling to change it.</p>
+
+<div class="panel">
+  <div class="plabel">ADD CATEGORY</div>
+  <div class="addrow">
+    <div class="grow"><input type="text" id="catName" placeholder="Produce, Meat, Toiletries…"></div>
+    <button class="btn" data-act="addcat">+ CATEGORY</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="plabel">ADD ITEM</div>
+  <div class="addrow" style="flex-wrap:nowrap">
+    <div class="grow"><input type="text" id="itName" placeholder="Item name"></div>
+    <div class="qtywrap"><input type="number" id="itQty" min="1" step="1" inputmode="numeric" value="1" placeholder="1"></div>
+    <span class="pricewrap"><span>$</span><input type="number" id="itPrice" step="0.01" inputmode="decimal" placeholder="0.00"></span>
+  </div>
+  <div class="addrow" style="margin-top:8px">
+    <div class="grow"><select id="itCat"></select></div>
+  </div>
+  <div class="addrow" style="margin-top:8px;flex-wrap:nowrap">
+    <div class="seg" id="foodSeg">
+      <button data-act="food" data-v="1">FOOD 3.625%</button>
+      <button data-act="food" data-v="0">NON-FOOD 10%</button>
+    </div>
+    <button class="btn" data-act="additem" style="margin-left:5px">+ ITEM</button>
+  </div>
+  <div class="addrow" style="margin-top:8px">
+    <div class="grow"><input type="text" id="itNote" placeholder="Note (optional) — what it turns into"></div>
+  </div>
+  <div class="hint">Items land unchecked so you can build the list at home. Leave the price at 0.00 and fill it in at the shelf. Non-food covers toiletries, paper goods, cleaning supplies, soda, and candy.</div>
+</div>
+
+<details class="tax-ref">
+  <summary>ALWAYS FULL RATE — NON-FOOD REFERENCE</summary>
+  <table>
+    <thead><tr><th>Category</th><th>Rule</th><th>Examples</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Soft drinks</td>
+        <td>Any sweetened beverage — carbonated or not</td>
+        <td>Soda, Red Bull, Gatorade, sweetened tea/lemonade</td>
+      </tr>
+      <tr>
+        <td>Candy</td>
+        <td>Sweetened confection with no flour, no refrigeration required</td>
+        <td>Skittles, gummies, hard candy. Chocolate chip cookies = food (has flour)</td>
+      </tr>
+      <tr>
+        <td>Prepared food</td>
+        <td>Sold heated by the store, sold with utensils, or mixed by the store for sale</td>
+        <td>Hot deli chicken, rotisserie, soup bar, fountain drinks</td>
+      </tr>
+      <tr>
+        <td>Dietary supplements</td>
+        <td>Vitamins, protein powders marketed as supplements</td>
+        <td>Whey protein, multivitamins</td>
+      </tr>
+    </tbody>
+  </table>
+</details>
+
+<div class="addrow" style="margin-top:14px">
+  <button class="btn ghost" data-act="copy">COPY LIST</button>
+  <button class="btn ghost" data-act="savereceipt">SAVE RECEIPT</button>
+  <button class="btn ghost" data-act="reset">RESET CHECKS</button>
+  <button class="btn ghost" data-act="newtrip">START NEW TRIP</button>
+</div>
+
+<div id="list"></div>
+
+<footer>
+  <div class="tear"></div>
+  <div class="tape">
+    <div class="tline"><span id="scanned">0 / 0 SCANNED</span><span id="planned">PLANNED $0.00</span></div>
+    <div class="tmain">
+      <div>
+        <div class="tlab" id="subline">IN CART · SUBTOTAL $0.00 + TAX $0.00</div>
+        <div class="tbig" id="gross">$0.00</div>
+      </div>
+      <div style="text-align:right">
+        <div class="tlab" id="leftlab">LEFT OF THE 300</div>
+        <div class="tleft" id="left">$300.00</div>
+      </div>
+    </div>
+    <div class="bar"><span id="bar" style="width:0%"></span></div>
+    <div class="warn" id="warn"></div>
+  </div>
+</footer>
+
+<script>
+var FOOD_TAX = 0.03625, OTHER_TAX = 0.10;
+var STORAGE_KEY = "groceryRun.v1";
+
+function freshState(){
+  return {
+    ceiling: 300,
+    cats: [],            // {id, name}
+    items: [],           // {id, catId, name, qty, note, price, food, tier}
+    checked: {}, skipped: {},
+    draftFood: true
+  };
+}
+
+var state = freshState();
+
+var TIER = {
+  core:{t:"CORE",bg:"#EDF0EC",fg:"#14181C"},
+  add:{t:"ADD",bg:"#FFC220",fg:"#14181C"},
+  trim:{t:"TRIM 1ST",bg:"#F6E6E1",fg:"#B3452B"}
+};
+
+/* ---- persistence -------------------------------------------------------
+   One key, whole state object, written from render(). Every mutation path
+   in this file ends in render() — verified by audit, see README. ---------- */
+
+function save(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch(e){ /* private mode or quota: keep working from memory */ }
+}
+
+function str(v){ return typeof v === "string" ? v : ""; }
+
+function flagMap(v){
+  var out = {};
+  if (v && typeof v === "object" && !Array.isArray(v)){
+    Object.keys(v).forEach(function(k){ if (v[k]) out[k] = true; });
+  }
+  return out;
+}
+
+// Merge onto a fresh default object one field at a time, so a stored trip
+// written by an older version simply keeps the defaults for keys it lacks.
+function load(){
+  var s = freshState(), raw = null, saved;
+  try { raw = localStorage.getItem(STORAGE_KEY); } catch(e){ return s; }
+  if (!raw) return s;
+  try { saved = JSON.parse(raw); } catch(e){ return s; }
+  if (!saved || typeof saved !== "object" || Array.isArray(saved)) return s;
+  try {
+    if (typeof saved.ceiling === "number" && isFinite(saved.ceiling) && saved.ceiling > 0)
+      s.ceiling = saved.ceiling;
+    if (Array.isArray(saved.cats)) s.cats = saved.cats
+      .filter(function(c){ return c && typeof c === "object" && str(c.id); })
+      .map(function(c){ return { id: str(c.id), name: str(c.name) || "Untitled" }; });
+    if (Array.isArray(saved.items)) s.items = saved.items
+      .filter(function(i){ return i && typeof i === "object" && str(i.id); })
+      .map(function(i){
+        var p = parseFloat(i.price);
+        return {
+          id: str(i.id), catId: str(i.catId), name: str(i.name),
+          qty: str(i.qty), note: str(i.note),
+          price: isNaN(p) ? 0 : p,
+          food: i.food !== false,
+          tier: TIER[i.tier] ? i.tier : "core"
+        };
+      });
+    s.checked = flagMap(saved.checked);
+    s.skipped = flagMap(saved.skipped);
+    if (typeof saved.draftFood === "boolean") s.draftFood = saved.draftFood;
+  } catch(e){ return freshState(); }
+  return s;
+}
+
+function newTrip(){
+  if (!confirm("Start a new trip? Every category, item, and check is cleared. The ceiling stays.")) return;
+  var ceiling = state.ceiling;
+  state = freshState();
+  state.ceiling = ceiling;
+  render();
+}
+
+function money(n){ return "$" + n.toFixed(2); }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function uid(p){ return p + Math.random().toString(36).slice(2,8) + Date.now().toString(36).slice(-3); }
+function rateOf(i){ return i.food === false ? OTHER_TAX : FOOD_TAX; }
+function qtyOf(i){ var q = parseFloat(i.qty); return (q > 0 && isFinite(q)) ? q : 1; }
+function grossOf(i){ return i.price * qtyOf(i) * (1 + rateOf(i)); }
+function pad(n){ return (n < 10 ? "0" : "") + n; }
+function visibleItems(){ return state.items; }
+function val(id){ return document.getElementById(id).value; }
+
+function addCat(){
+  var n = val("catName").trim();
+  if (!n) return;
+  var dupe = state.cats.filter(function(c){ return c.name.toLowerCase() === n.toLowerCase(); })[0];
+  if (!dupe) state.cats.push({ id: uid("c"), name: n });
+  document.getElementById("catName").value = "";
+  render();
+  document.getElementById("itCat").value = dupe ? dupe.id : state.cats[state.cats.length-1].id;
+}
+
+function addItem(){
+  var n = val("itName").trim();
+  if (!n) return;
+  if (!state.cats.length){ state.cats.push({ id: uid("c"), name: "Uncategorized" }); }
+  var catId = val("itCat") || state.cats[0].id;
+  var p = parseFloat(val("itPrice"));
+  state.items.push({
+    id: uid("i"), catId: catId, name: n,
+    qty: val("itQty").trim(), note: val("itNote").trim(),
+    price: isNaN(p) ? 0 : p, food: state.draftFood
+  });
+  ["itName","itPrice","itNote"].forEach(function(f){ document.getElementById(f).value = ""; });
+  document.getElementById("itQty").value = "1";
+  render();
+  document.getElementById("itCat").value = catId;
+  document.getElementById("itName").focus();
+}
+
+function delCat(id){
+  var n = state.items.filter(function(i){ return i.catId === id; }).length;
+  if (n && !confirm("Delete this category and its " + n + " item(s)?")) return;
+  state.items = state.items.filter(function(i){ return i.catId !== id; });
+  state.cats = state.cats.filter(function(c){ return c.id !== id; });
+  render();
+}
+
+function rowHTML(i){
+  var on = !!state.checked[i.id], sk = !!state.skipped[i.id];
+  return '<li><div class="row">' +
+    '<button class="box ' + (on?"on":"") + '" data-act="toggle" data-id="' + i.id + '" aria-label="Mark ' + esc(i.name) + ' as in cart">' + (on?"\u2713":"") + '</button>' +
+    '<button class="mid ' + (sk?"gone":(on?"dim":"")) + '" data-act="toggle" data-id="' + i.id + '">' +
+      '<div class="tags">' +
+        '<span class="name ' + (on||sk?"strike":"") + '">' + esc(i.name) + '</span>' +
+        (i.qty ? '<span class="qty">' + esc(i.qty) + '</span>' : '') +
+        '<span class="rate">' + (i.food === false ? "NON-FOOD" : "FOOD") + '</span>' +
+      '</div>' +
+      (i.note ? '<div class="note">' + esc(i.note) + '</div>' : '') +
+    '</button>' +
+    '<div class="right">' +
+      '<button class="price ' + (sk?"gone":"") + '" data-act="price" data-id="' + i.id + '">' + money(i.price) + '</button>' +
+      '<div class="acts">' +
+        '<button class="act" data-act="skip" data-id="' + i.id + '">' + (sk?"UNDO SKIP":"SKIP") + '</button>' +
+        '<button class="act del" data-act="del" data-id="' + i.id + '">DELETE</button>' +
+      '</div>' +
+    '</div></div></li>';
+}
+
+function render(){
+  // category dropdown
+  var sel = document.getElementById("itCat"), keep = sel.value;
+  sel.innerHTML = state.cats.length
+    ? state.cats.map(function(c){ return '<option value="' + c.id + '">' + esc(c.name) + '</option>'; }).join("")
+    : '<option value="">Add a category first</option>';
+  if (keep && state.cats.some(function(c){ return c.id === keep; })) sel.value = keep;
+
+  // segmented controls
+  document.querySelectorAll('#foodSeg button').forEach(function(b){
+    b.classList.toggle("on", (b.getAttribute("data-v") === "1") === state.draftFood);
+  });
+
+  var html = "";
+  if (!state.cats.length){
+    html = '<div class="empty">No categories yet. Add one above — Produce, Meat, Frozen, Toiletries, whatever your trip looks like — then start adding items under it.</div>';
+  }
+  state.cats.forEach(function(c, idx){
+    var items = visibleItems().filter(function(i){ return i.catId === c.id; });
+    var tot = items.filter(function(i){ return !state.skipped[i.id]; })
+                   .reduce(function(a,i){ return a + grossOf(i); }, 0);
+    html += '<section><div class="shead">' +
+      '<div class="sleft"><span class="aisle">' + pad(idx+1) + '</span><h2>' + esc(c.name) + '</h2></div>' +
+      '<div class="sright"><span class="stotal">' + money(tot) + '</span>' +
+      '<button class="xcat" data-act="delcat" data-id="' + c.id + '">REMOVE</button></div></div>';
+    if (!items.length) html += '<div class="empty">Nothing here yet.</div>';
+    else { html += '<ul>' + items.map(rowHTML).join("") + '</ul>'; }
+    html += '</section>';
+  });
+  document.getElementById("list").innerHTML = html;
+
+  document.getElementById("ceilBtn").textContent = money(state.ceiling);
+  totals();
+  save();
+}
+
+function totals(){
+  var live = visibleItems().filter(function(i){ return !state.skipped[i.id]; });
+  var cart = live.filter(function(i){ return state.checked[i.id]; });
+  var planned = live.reduce(function(a,i){ return a + grossOf(i); }, 0);
+  var net = cart.reduce(function(a,i){ return a + i.price * qtyOf(i); }, 0);
+  var tax = cart.reduce(function(a,i){ return a + i.price * qtyOf(i) * rateOf(i); }, 0);
+  var gross = net + tax, C = state.ceiling;
+
+  document.getElementById("scanned").textContent = cart.length + " / " + live.length + " SCANNED";
+  document.getElementById("planned").textContent = "PLANNED " + money(planned);
+  document.getElementById("subline").textContent = "IN CART · SUBTOTAL " + money(net) + " + TAX " + money(tax);
+  document.getElementById("gross").textContent = money(gross);
+  document.getElementById("leftlab").textContent = "LEFT OF THE " + Math.round(C);
+  var L = document.getElementById("left");
+  L.textContent = money(Math.max(0, C - gross));
+  L.style.color = gross > C ? "var(--over)" : "var(--good)";
+  var bar = document.getElementById("bar");
+  bar.style.width = (C > 0 ? Math.min(100, (gross / C) * 100) : 0) + "%";
+  bar.style.background = gross > C ? "var(--over)" : "var(--spark)";
+  var w = document.getElementById("warn");
+  if (planned > C){ w.textContent = "Planned total is over " + money(C) + " by " + money(planned - C) + "."; w.style.color = "var(--over)"; }
+  else if (live.length && planned < C * 0.75){ w.textContent = "Planned total is well under the ceiling — " + money(C - planned) + " of room left."; w.style.color = "var(--good)"; }
+  else { w.textContent = ""; }
+}
+
+function buildReceiptText(){
+  var maxName = 4, maxQty = 3;
+  state.items.forEach(function(i){
+    if (i.name.length > maxName) maxName = i.name.length;
+    var q = String(qtyOf(i)); if (q.length > maxQty) maxQty = q.length;
+  });
+  function padR(s,n){ s=String(s); return s+" ".repeat(Math.max(0,n-s.length)); }
+  function padL(s,n){ s=String(s); return " ".repeat(Math.max(0,n-s.length))+s; }
+  var PW = 7;
+  var out = ["GROCERY RUN — ceiling " + money(state.ceiling), ""];
+  out.push("  "+padR("ITEM",maxName)+"  "+padR("QTY",maxQty)+"  "+padL("PRICE",PW)+"  TAX");
+  out.push("  "+"-".repeat(maxName)+"  "+"-".repeat(maxQty)+"  "+"-".repeat(PW)+"  "+"-".repeat(8));
+  state.cats.forEach(function(c){
+    var items = state.items.filter(function(i){ return i.catId === c.id; });
+    if (!items.length) return;
+    out.push("");
+    out.push(c.name.toUpperCase());
+    items.forEach(function(i){
+      out.push("  "+padR(i.name,maxName)+"  "+padR(String(qtyOf(i)),maxQty)+"  "+padL(money(i.price),PW)+"  "+(i.food===false?"non-food":"food"));
+    });
+  });
+  var live = visibleItems().filter(function(i){ return !state.skipped[i.id]; });
+  var subtotal = live.reduce(function(a,i){ return a + i.price * qtyOf(i); }, 0);
+  var taxNF = live.filter(function(i){ return i.food === false; })
+                  .reduce(function(a,i){ return a + i.price * qtyOf(i) * OTHER_TAX; }, 0);
+  var taxF  = live.filter(function(i){ return i.food !== false; })
+                  .reduce(function(a,i){ return a + i.price * qtyOf(i) * FOOD_TAX; }, 0);
+  var TLAB = 22, TVAL = 8;
+  var sep = "  "+"-".repeat(TLAB + 2 + TVAL);
+  out.push(""); out.push(sep);
+  out.push("  "+padR("SUBTOTAL",TLAB)+"  "+padL(money(subtotal),TVAL));
+  out.push("  "+padR("TAX 1  NON-FOOD 9.125%",TLAB)+"  "+padL(money(taxNF),TVAL));
+  out.push("  "+padR("TAX 2  FOOD 2.625%",TLAB)+"  "+padL(money(taxF),TVAL));
+  out.push(sep);
+  out.push("  "+padR("TOTAL",TLAB)+"  "+padL(money(subtotal+taxNF+taxF),TVAL));
+  return out.join("\n");
+}
+
+function copyList(){
+  var text = buildReceiptText();
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){ alert("List copied."); },
+      function(){ prompt("Copy your list:", text); });
+  } else { prompt("Copy your list:", text); }
+}
+
+function saveReceipt(){
+  var d = new Date();
+  var filename = d.getFullYear() + "" + pad(d.getMonth()+1) + "" + pad(d.getDate()) + "_receipt.txt";
+  var text = buildReceiptText();
+  var file = new File([text], filename, { type: "text/plain" });
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })){
+    navigator.share({ files: [file], title: filename }).catch(function(err){
+      if (err.name !== "AbortError") alert("Share failed: " + err.message);
+    });
+  } else {
+    alert("File sharing isn't supported on this browser. Use COPY LIST instead.");
+  }
+}
+
+document.addEventListener("click", function(e){
+  var b = e.target.closest("button"); if (!b) return;
+  var act = b.getAttribute("data-act"), id = b.getAttribute("data-id");
+  if (b.id === "ceilBtn"){
+    var v = prompt("Budget ceiling for this trip (after tax):", state.ceiling);
+    if (v !== null){ var f = parseFloat(v); if (!isNaN(f) && f > 0){ state.ceiling = f; render(); } }
+    return;
+  }
+  if (act === "addcat") addCat();
+  else if (act === "additem") addItem();
+  else if (act === "delcat") delCat(id);
+  else if (act === "food"){ state.draftFood = b.getAttribute("data-v") === "1"; render(); }
+  else if (act === "copy") copyList();
+  else if (act === "savereceipt") saveReceipt();
+  else if (act === "reset"){ if (confirm("Uncheck everything? Items and prices stay.")){ state.checked = {}; render(); } }
+  else if (act === "newtrip") newTrip();
+  else if (act === "toggle"){ if (state.checked[id]) delete state.checked[id]; else state.checked[id] = true; render(); }
+  else if (act === "skip"){ if (state.skipped[id]) delete state.skipped[id]; else state.skipped[id] = true; render(); }
+  else if (act === "del"){
+    state.items = state.items.filter(function(x){ return x.id !== id; });
+    delete state.checked[id]; delete state.skipped[id]; render();
+  }
+  else if (act === "price"){
+    var it = state.items.filter(function(x){ return x.id === id; })[0]; if (!it) return;
+    var p = prompt("Actual shelf price for " + it.name, it.price.toFixed(2));
+    if (p !== null){ var n = parseFloat(p); if (!isNaN(n)){ it.price = n; render(); } }
+  }
+});
+
+document.addEventListener("keydown", function(e){
+  if (e.key !== "Enter") return;
+  if (e.target.id === "catName") addCat();
+  else if (["itName","itQty","itPrice","itNote"].indexOf(e.target.id) > -1) addItem();
+});
+
+state = load();
+render();
+
+if ("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){ /* http:// or file:// — app still works */ });
+  });
+}
+</script>
+</body>
+</html>
